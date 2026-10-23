@@ -1,0 +1,23 @@
+# Start the API and the frontend:  docker compose up --build
+# Train first (python -m src.pipeline) so that models/ and data/serving/ exist.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+      - ./data/serving:/app/data/serving:ro
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000   # inside docker compose, the API is reached by its service name
+    depends_on:
+      - api

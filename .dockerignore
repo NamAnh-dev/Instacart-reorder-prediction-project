@@ -1,0 +1,11 @@
+# Keep the build context small: data and models are mounted, not copied.
+.git
+.venv
+data
+models
+notebooks
+reports
+tests
+**/__pycache__
+.pytest_cache
+.ruff_cache
