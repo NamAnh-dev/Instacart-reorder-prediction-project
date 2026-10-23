@@ -1,0 +1,11 @@
+# API container. Versions are pinned: the saved model must be loaded with the same
+# scikit-learn / LightGBM versions that trained it.
+fastapi==0.159.1
+uvicorn==0.54.0
+pydantic==2.14.1
+pandas==3.0.6
+numpy==2.5.4
+pyarrow==26.0.0
+scikit-learn==1.9.1
+lightgbm==4.7.0
+joblib==1.6.0
