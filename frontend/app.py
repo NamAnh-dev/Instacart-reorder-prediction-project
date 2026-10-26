@@ -24,7 +24,11 @@ def call_api(method: str, path: str, **kwargs):
     except requests.RequestException:
         return None, f"Cannot reach the API at {API_URL}. Is it running?"
     if response.status_code != 200:
-        return None, response.json().get("detail", f"API error {response.status_code}")
+        try:
+            detail = response.json().get("detail")
+        except ValueError:  # the error body is not JSON (e.g. an HTML error page)
+            detail = None
+        return None, detail or f"API error {response.status_code}"
     return response.json(), None
 
 
@@ -73,18 +77,20 @@ with left:
     else:
         st.dataframe(
             items[["product_name", "department", "probability"]],
+            # fixed widths, so a long product name does not push the other columns out of view
             column_config={
-                "product_name": "Product",
-                "department": "Department",
+                "product_name": st.column_config.TextColumn("Product", width="medium"),
+                "department": st.column_config.TextColumn("Department", width="small"),
                 "probability": st.column_config.ProgressColumn(
-                    "Probability", min_value=0.0, max_value=1.0, format="%.2f"
+                    "Probability", min_value=0.0, max_value=1.0, format="%.2f", width="small"
                 ),
             },
             hide_index=True,
             width="stretch",
         )
     st.caption(
-        f"{len(items)} of {prediction['n_candidates']} past products have probability >= {prediction['threshold']:.2f}."
+        f"Showing {len(items)} products with probability >= {prediction['threshold']:.2f} (at most {k}), "
+        f"out of {prediction['n_candidates']} past products."
     )
 
 with right:
@@ -94,10 +100,12 @@ with right:
         st.dataframe(
             past[["product_name", "department", "times_bought", "orders_since_last"]],
             column_config={
-                "product_name": "Product",
-                "department": "Department",
-                "times_bought": "Times bought",
-                "orders_since_last": "Orders since last purchase",
+                "product_name": st.column_config.TextColumn("Product", width="medium"),
+                "department": st.column_config.TextColumn("Department", width="small"),
+                "times_bought": st.column_config.NumberColumn("Times bought", width="small"),
+                "orders_since_last": st.column_config.NumberColumn(
+                    "Orders ago", help="Orders since the last purchase (0 = in the last order)", width="small"
+                ),
             },
             hide_index=True,
             width="stretch",
