@@ -32,6 +32,7 @@ def user_features(history: pd.DataFrame) -> pd.DataFrame:
         u_last_days=("days_since_first", "max"),  # helper column, not a model feature
     )
     # average gap = total days between the first and the last order / number of gaps
+    # (clip: never divide by 0, even for a user with a single order)
     users["u_avg_days_between"] = users["u_last_days"] / (users["u_n_orders"] - 1).clip(lower=1)
 
     not_first = history[history["order_number"] > 1]
@@ -64,6 +65,7 @@ def build_features(history: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
+    # user_features() is indexed by user_id, product_features() by product_id: join them on these columns of `up`
     up = up.merge(user_features(history), left_on="user_id", right_index=True, how="left")
     up = up.merge(product_features(history), left_on="product_id", right_index=True, how="left")
 

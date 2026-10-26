@@ -24,6 +24,8 @@ def choose_baselines(valid: pd.DataFrame) -> dict[str, dict]:
     """Tune every baseline on the validation users.
     Returns {name: {"score": function(df) -> scores, "threshold": t, "setting": text}}."""
     rate_t, _, _ = best_threshold(valid, purchase_rate(valid), THRESHOLDS)
+    # "score" holds the function itself (no brackets), so train.py can apply it later
+    # to any group of users: rule["score"](test)
     return {
         "repeat_last_order": {"score": repeat_last_order, "threshold": 1.0, "setting": "products of the last order"},
         "purchase_rate": {"score": purchase_rate, "threshold": rate_t, "setting": f"order rate >= {rate_t:.2f}"},

@@ -45,11 +45,15 @@ with st.sidebar:
     st.write(f"**Users available:** {health['n_users']:,}")
     st.caption(f"API: {API_URL}")
 
+# The "User ID" input below has key="user_id", so its value lives in st.session_state.user_id.
+# Streamlit reruns this script on every click; the session state keeps the value between reruns.
+# First visit: start with a random user.
 if "user_id" not in st.session_state:
     users, _ = call_api("GET", "/users/sample", params={"n": 1})
     st.session_state.user_id = users[0] if users else 3
 
 col_input, col_k, col_button = st.columns([2, 2, 1])
+# The button is checked BEFORE the input is created, so it may still change the input's value.
 if col_button.button("🎲 Random user", width="stretch"):
     users, _ = call_api("GET", "/users/sample", params={"n": 1})
     if users:

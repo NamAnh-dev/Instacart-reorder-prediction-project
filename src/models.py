@@ -64,7 +64,7 @@ def feature_importance(model, features: list[str]) -> pd.Series:
     """Importance of each feature, scaled to sum to 1.
     Linear model: absolute coefficient (features are standardized, so they are comparable).
     Tree models: total gain of the splits that use the feature."""
-    if isinstance(model, Pipeline):
+    if isinstance(model, Pipeline):  # logistic regression = Pipeline(scaler, model); the last step has coef_
         values = np.abs(model[-1].coef_[0])
     else:
         values = np.asarray(model.feature_importances_, dtype=float)

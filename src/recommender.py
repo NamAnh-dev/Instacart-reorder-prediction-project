@@ -33,7 +33,7 @@ class Recommender:
         """All (user, product) feature rows of one user. KeyError if the user is unknown."""
         if user_id not in self.known_users:
             raise KeyError(user_id)
-        return self.table.loc[[user_id]]
+        return self.table.loc[[user_id]]  # [[ ]]: always a DataFrame, even if the user has only one product
 
     def _with_product_info(self, df: pd.DataFrame) -> list[dict]:
         df = df.join(self.products, on="product_id")
