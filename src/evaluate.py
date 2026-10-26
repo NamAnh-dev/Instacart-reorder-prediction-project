@@ -22,14 +22,29 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from src.config import SEED
 
 
+def count_per_user(df: pd.DataFrame, selected) -> pd.DataFrame:
+    """For every user, count the products that are:
+    n_true (reordered), n_selected (recommended or shown), n_hits (both)."""
+    rows = pd.DataFrame(
+        {
+            "user_id": df["user_id"].to_numpy(),
+            "is_true": df["label"].to_numpy(dtype=bool),
+            "is_selected": np.asarray(selected, dtype=bool),
+        }
+    )
+    rows["is_hit"] = rows["is_true"] & rows["is_selected"]
+    counts = rows.groupby("user_id")[["is_true", "is_selected", "is_hit"]].sum()  # True counts as 1
+    return counts.rename(columns={"is_true": "n_true", "is_selected": "n_selected", "is_hit": "n_hits"})
+
+
 def order_f1(df: pd.DataFrame, pred) -> pd.Series:
     """F1 for every user. `df` has columns user_id and label; `pred` is True when recommended."""
-    pred = np.asarray(pred, dtype=bool)
-    label = df["label"].to_numpy(dtype=bool)
-    counts = pd.DataFrame({"tp": label & pred, "n_pred": pred, "n_true": label}).groupby(df["user_id"].to_numpy()).sum()
-    denom = counts["n_pred"] + counts["n_true"]
-    f1 = np.where(denom == 0, 1.0, 2 * counts["tp"] / denom.where(denom > 0, 1))
-    return pd.Series(f1, index=counts.index, name="f1")
+    counts = count_per_user(df, pred)
+    # F1 = 2 * TP / (n_predicted + n_true)
+    f1 = 2 * counts["n_hits"] / (counts["n_selected"] + counts["n_true"])
+    # 0 / 0 gives NaN: the user reordered nothing and we recommended nothing, which is correct -> F1 = 1
+    f1 = f1.fillna(1.0)
+    return f1.rename("f1")
 
 
 def mean_f1(df: pd.DataFrame, pred) -> float:
@@ -47,11 +62,12 @@ def bootstrap_ci(values, n_boot: int = 1000, seed: int = SEED, alpha: float = 0.
 
 def avg_items(df: pd.DataFrame, pred) -> float:
     """Average number of recommended products per user."""
-    return float(pd.Series(np.asarray(pred, dtype=bool)).groupby(df["user_id"].to_numpy()).sum().mean())
+    return float(count_per_user(df, pred)["n_selected"].mean())
 
 
 def top_k_mask(df: pd.DataFrame, score, k: int) -> np.ndarray:
     """True for the k highest scores of each user."""
+    # rank 1 = the user's highest score; method="first" gives tied scores different ranks, so at most k are kept
     rank = (
         pd.Series(np.asarray(score, dtype=float))
         .groupby(df["user_id"].to_numpy())
@@ -64,16 +80,13 @@ def precision_recall_at_k(df: pd.DataFrame, score, k: int) -> dict:
     """precision@k: share of the shown items that were reordered (averaged over all users).
     A user with fewer than k past products is shown all of them.
     recall@k: share of the reordered items that were shown (users with at least one reorder)."""
-    shown = top_k_mask(df, score, k)
-    label = df["label"].to_numpy(dtype=bool)
-    counts = (
-        pd.DataFrame({"tp": label & shown, "n_shown": shown, "n_true": label}).groupby(df["user_id"].to_numpy()).sum()
-    )
-    has_true = counts["n_true"] > 0
-    return {
-        f"precision@{k}": float((counts["tp"] / counts["n_shown"]).mean()),
-        f"recall@{k}": float((counts["tp"][has_true] / counts["n_true"][has_true]).mean()),
-    }
+    counts = count_per_user(df, top_k_mask(df, score, k))  # here "selected" = shown on the shelf
+    # every user has at least one past product, so n_selected is never 0
+    precision = counts["n_hits"] / counts["n_selected"]
+    # recall is not defined for a user who reordered nothing (0 / 0), so we skip these users
+    reorderers = counts[counts["n_true"] > 0]
+    recall = reorderers["n_hits"] / reorderers["n_true"]
+    return {f"precision@{k}": float(precision.mean()), f"recall@{k}": float(recall.mean())}
 
 
 def best_threshold(df: pd.DataFrame, score, thresholds) -> tuple[float, float, dict]:

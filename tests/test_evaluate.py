@@ -2,7 +2,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.evaluate import avg_items, best_threshold, bootstrap_ci, evaluate, order_f1, precision_recall_at_k
+from src.evaluate import (
+    avg_items,
+    best_threshold,
+    bootstrap_ci,
+    count_per_user,
+    evaluate,
+    order_f1,
+    precision_recall_at_k,
+)
 
 
 @pytest.fixture
@@ -15,6 +23,14 @@ def df():
             "score": [0.9, 0.2, 0.6, 0.1, 0.3, 0.8, 0.7],
         }
     )
+
+
+def test_count_per_user(df):
+    counts = count_per_user(df, df["score"] >= 0.5)
+    # user 1: true {a, b}, selected {a, c}, hit {a}; user 2: nothing; user 3: true {e}, selected {e, f}
+    assert counts.loc[1].tolist() == [2, 2, 1]
+    assert counts.loc[2].tolist() == [0, 0, 0]
+    assert counts.loc[3].tolist() == [1, 2, 1]
 
 
 def test_order_f1_cases(df):
