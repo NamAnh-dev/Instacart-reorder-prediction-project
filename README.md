@@ -33,6 +33,11 @@ recall@10 for a shelf of 10 products.
 1. `src/preprocess.py`: quality checks, labels, user split.
 2. `src/features.py`: 16 features about the user, the product and the user × product pair
    (how often and how recently it was bought). The same code builds the features for training and for the API.
+   The EDA showed why: the more often, the more recently and the more regularly a user bought a product,
+   the more likely they buy it again (train users).
+
+   ![Reorder rate by number of purchases, orders since the last purchase and share of orders](reports/figures/eda_04_reorder_signals.png)
+
 3. `src/baselines.py`: two simple rules, "repeat the last order" and "products bought in at least X% of orders".
 4. `src/models.py`, `src/train.py`: logistic regression, random forest and LightGBM. The threshold of each model
    and the final model are chosen on the validation users; the test users are used once at the end.
@@ -41,6 +46,8 @@ recall@10 for a shelf of 10 products.
 Some choices: I split by user so that the model is always tested on new users. I do not use anything about
 the next order (day, hour, days since the last order) because the shelf is built before the customer orders.
 Only about 10% of the pairs are positive, so the best threshold is far below 0.5.
+
+![Mean F1 on validation users for each threshold](reports/figures/results_02_threshold.png)
 
 ## Results
 
@@ -65,6 +72,14 @@ What I take from it:
 - Weak spots: the 7% of users who buy nothing again (F1 about 0.19) and products bought rarely
   (pantry, household).
 - These are offline numbers. The effect on real orders would need an A/B test.
+
+Feature importance (LightGBM: gain, logistic regression: size of the coefficient on scaled features):
+
+![Feature importance of LightGBM and logistic regression](reports/figures/results_03_feature_importance.png)
+
+Precision and recall of the final model by department, on the test users:
+
+![Precision and recall by department](reports/figures/results_05_by_department.png)
 
 ## How to run
 
