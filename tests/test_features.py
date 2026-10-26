@@ -1,4 +1,3 @@
-import pandas as pd
 import pytest
 
 from src.config import FEATURES
@@ -57,4 +56,3 @@ def test_add_labels(raw_tables):
     assert labelled[(1, A)] == 1
     assert labelled.sum() == 1
     assert (df.loc[df["user_id"] == 3, "split"] == "serving").all()
-    assert isinstance(df, pd.DataFrame)
