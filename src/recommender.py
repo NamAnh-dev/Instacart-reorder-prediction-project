@@ -47,8 +47,10 @@ class Recommender:
         The list can be empty: the model then thinks the user will not reorder anything."""
         rows = self._user_rows(user_id)
         prob = self.model.predict_proba(rows[self.features])[:, 1]
-        scored = pd.DataFrame({"product_id": rows["product_id"].to_numpy(), "probability": prob.round(4)})
+        scored = pd.DataFrame({"product_id": rows["product_id"].to_numpy(), "probability": prob})
+        # compare the raw probability with the threshold, like in training; round only for display
         chosen = scored[scored["probability"] >= self.threshold].sort_values("probability", ascending=False).head(k)
+        chosen["probability"] = chosen["probability"].round(4)
         return {
             "user_id": int(user_id),
             "model_name": self.model_name,
