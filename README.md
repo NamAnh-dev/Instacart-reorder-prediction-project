@@ -1,5 +1,7 @@
 # Instacart "Buy It Again": Reorder Prediction, end to end
 
+[![CI](https://github.com/NamAnh-dev/Instacart-reorder-prediction-project/actions/workflows/ci.yml/badge.svg)](https://github.com/NamAnh-dev/Instacart-reorder-prediction-project/actions/workflows/ci.yml)
+
 Predict which products a customer will **reorder** in their next Instacart order, and serve the
 predictions through an **API** and a small **web app**.
 
@@ -20,7 +22,7 @@ raw CSV ──► preprocess ──► features ──► train & choose model �
 | **Data** | Kaggle Instacart: 3.4M orders, 206k users, 32M purchased items |
 | **Model** | One row per (user, product) pair, binary label "reordered in the next order". LightGBM with 16 frequency/recency features. |
 | **Result** | Mean F1 per order **0.376** vs **0.327** for the best simple rule (+15%). On a 10-item shelf, about **31%** of the products shown are bought again vs 27% with the rule. |
-| **Serving** | FastAPI endpoint `/predict` + Streamlit app, both in Docker; 30 unit tests and CI on GitHub Actions |
+| **Serving** | FastAPI endpoint `/predict` + Streamlit app, both in Docker; 32 tests (pytest) and CI on GitHub Actions |
 
 ## 1. Problem
 
@@ -34,7 +36,7 @@ raw CSV ──► preprocess ──► features ──► train & choose model �
 ## 2. Data
 
 [Kaggle – Instacart Market Basket Analysis](https://www.kaggle.com/c/instacart-market-basket-analysis).
-Not included in this repository: download it and put the 6 CSV files in `data/raw/`.
+Not included in this repository: see [Get the data](#get-the-data).
 
 Every user has a purchase history (`prior` orders) and one last order:
 - **131,209 users** have a `train` last order: we know what they bought → used for modeling,
@@ -93,6 +95,17 @@ The 95% interval comes from a bootstrap over the test users.
 - Weak spots: the 7% of users who reorder nothing (F1 about 0.19), and rarely bought products
   (pantry, household) whose timing is hard to predict.
 
+**What the result means for the business**
+- If the "Buy it again" shelf shows each customer's 10 most likely past products, about **3 in 10** of them are
+  bought again in the next order (precision@10 0.307), vs **2.7 in 10** with the best simple rule (0.272).
+  Customers with fewer than 10 past products see all of them.
+- The shelf also catches more of what customers come back for: **59%** of the reordered products are in the
+  top 10, vs **52%** with the rule (recall@10).
+- When the shelf only shows the products above the threshold, it is **shorter** (8.4 products on average vs 10.7
+  for the rule) and still more accurate (F1 0.376 vs 0.327): less screen space for a better guess.
+- These are offline numbers on past orders. Whether the shelf leads to more items in the cart can only be
+  measured with an A/B test.
+
 ![Reorder signals](reports/figures/eda_04_reorder_signals.png)
 
 ## 5. Project structure
@@ -130,6 +143,34 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+### Get the data
+
+The data comes from the Kaggle competition
+[Instacart Market Basket Analysis](https://www.kaggle.com/c/instacart-market-basket-analysis).
+You need a free Kaggle account and must accept the competition rules before downloading.
+Put these 6 files in `data/raw/`:
+
+```
+data/raw/
+├── aisles.csv
+├── departments.csv
+├── order_products__prior.csv   (the largest file: 32M rows, about 580 MB)
+├── order_products__train.csv
+├── orders.csv
+└── products.csv
+```
+
+- **Browser:** download the zip from the competition's Data tab and unzip it into `data/raw/`
+  (if the CSV files inside are zipped too, unzip them as well).
+- **Kaggle CLI** (optional, needs an API token from your Kaggle settings saved as `~/.kaggle/kaggle.json`):
+
+```bash
+pip install kaggle
+kaggle competitions download -c instacart-market-basket-analysis -p data/raw
+```
+
+Then unzip the downloaded file in `data/raw/` in the same way.
+
 ### Train
 
 ```bash
@@ -138,6 +179,9 @@ python -m src.pipeline
 
 This runs the 3 steps: `src.preprocess`, `src.features`, `src.train` (each can also be run on its own).
 For a quick trial on 10% of the users: `python -m src.train --sample 0.1`.
+
+On a laptop with an Intel i5-1035G1 (4 cores) and 16 GB of RAM, the full pipeline took about **8 minutes**
+(preprocess 1 min, features 1 min, training 6 min) and used about **6 GB of RAM** at its peak.
 
 ### Serve with Docker
 
