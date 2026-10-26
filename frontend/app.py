@@ -79,12 +79,13 @@ with left:
     else:
         st.dataframe(
             items[["product_name", "department", "probability"]],
-            # fixed widths, so a long product name does not push the other columns out of view
+            # widths in pixels: a long product name cannot push the other columns out of view.
+            # They add up to less than half a laptop screen; Streamlit shares any extra space between the columns.
             column_config={
-                "product_name": st.column_config.TextColumn("Product", width="medium"),
-                "department": st.column_config.TextColumn("Department", width="small"),
+                "product_name": st.column_config.TextColumn("Product", width=175),
+                "department": st.column_config.TextColumn("Department", width=115),
                 "probability": st.column_config.ProgressColumn(
-                    "Probability", min_value=0.0, max_value=1.0, format="%.2f", width="small"
+                    "Probability", min_value=0.0, max_value=1.0, format="%.2f", width=100
                 ),
             },
             hide_index=True,
@@ -100,13 +101,12 @@ with right:
     past = pd.DataFrame(history or [])
     if not past.empty:
         st.dataframe(
-            past[["product_name", "department", "times_bought", "orders_since_last"]],
+            past[["product_name", "times_bought", "orders_since_last"]],
             column_config={
-                "product_name": st.column_config.TextColumn("Product", width="medium"),
-                "department": st.column_config.TextColumn("Department", width="small"),
-                "times_bought": st.column_config.NumberColumn("Times bought", width="small"),
+                "product_name": st.column_config.TextColumn("Product", width=200),
+                "times_bought": st.column_config.NumberColumn("Times bought", width=100),
                 "orders_since_last": st.column_config.NumberColumn(
-                    "Orders ago", help="Orders since the last purchase (0 = in the last order)", width="small"
+                    "Orders ago", help="Orders since the last purchase (0 = in the last order)", width=90
                 ),
             },
             hide_index=True,
