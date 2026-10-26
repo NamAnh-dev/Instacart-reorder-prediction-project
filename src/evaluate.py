@@ -91,9 +91,14 @@ def best_threshold(df: pd.DataFrame, score, thresholds) -> tuple[float, float, d
     """Try every threshold (recommend when score >= t) and keep the one with the best mean F1.
     Returns (threshold, f1, {threshold: f1})."""
     score = np.asarray(score, dtype=float)
-    curve = {float(t): mean_f1(df, score >= t) for t in thresholds}
-    best = max(curve, key=curve.get)
-    return best, curve[best], curve
+    curve = {}  # threshold -> mean F1
+    best_t, best_f1 = None, -1.0
+    for t in thresholds:
+        f1 = mean_f1(df, score >= t)
+        curve[float(t)] = f1
+        if f1 > best_f1:  # strictly better: on a tie we keep the first (lowest) threshold
+            best_t, best_f1 = float(t), f1
+    return best_t, best_f1, curve
 
 
 def evaluate(df: pd.DataFrame, score, threshold: float, k: int, with_ci: bool = False) -> dict:

@@ -58,10 +58,12 @@ def run_baselines(valid: pd.DataFrame, test: pd.DataFrame) -> list[dict]:
     return rows
 
 
-def run_models(data: dict[str, pd.DataFrame], names: list[str]):
+def run_models(data: dict[str, pd.DataFrame], names: list[str]) -> dict[str, dict]:
+    """Fit every model and tune its threshold on the validation users.
+    Returns {name: {"row": result row, "model": fitted model, "curve": threshold curve,
+                    "importance": feature importance, "p_test": test probabilities}}."""
     train, valid, test = data["train"], data["valid"], data["test"]
-    rows, fitted, curves, importances = [], {}, {}, {}
-    test_scores = {}
+    results = {}
     for name in names:
         start = time.time()
         model = fit_model(name, make_model(name), train[FEATURES], train["label"], valid[FEATURES], valid["label"])
@@ -71,24 +73,26 @@ def run_models(data: dict[str, pd.DataFrame], names: list[str]):
         p_test = model.predict_proba(test[FEATURES])[:, 1]
         threshold, _, curve = best_threshold(valid, p_valid, THRESHOLDS)
 
-        rows.append(
-            {
-                "name": name,
-                "type": "model",
-                "setting": f"probability >= {threshold:.2f}",
-                "threshold": threshold,
-                "fit_seconds": round(fit_seconds, 1),
-                "valid": evaluate(valid, p_valid, threshold, TOP_K),
-                "test": evaluate(test, p_test, threshold, TOP_K, with_ci=True),
-            }
-        )
-        fitted[name], curves[name], test_scores[name] = model, curve, p_test
-        importances[name] = feature_importance(model, FEATURES)
+        row = {
+            "name": name,
+            "type": "model",
+            "setting": f"probability >= {threshold:.2f}",
+            "threshold": threshold,
+            "fit_seconds": round(fit_seconds, 1),
+            "valid": evaluate(valid, p_valid, threshold, TOP_K),
+            "test": evaluate(test, p_test, threshold, TOP_K, with_ci=True),
+        }
+        results[name] = {
+            "row": row,
+            "model": model,
+            "curve": curve,
+            "importance": feature_importance(model, FEATURES),
+            "p_test": p_test,
+        }
         print(
-            f"  model    {name:<20} valid F1 {rows[-1]['valid']['f1']:.4f}  "
-            f"threshold {threshold:.2f}  ({fit_seconds:.0f}s)"
+            f"  model    {name:<20} valid F1 {row['valid']['f1']:.4f}  threshold {threshold:.2f}  ({fit_seconds:.0f}s)"
         )
-    return rows, fitted, curves, importances, test_scores
+    return results
 
 
 def comparison_table(rows: list[dict], best: str) -> str:
@@ -121,15 +125,17 @@ def main(sample: float = 1.0, names: list[str] | None = None) -> dict:
     print("Baselines:")
     rows = run_baselines(data["valid"], data["test"])
     print("Models:")
-    model_rows, fitted, curves, importances, test_scores = run_models(data, names)
+    models = run_models(data, names)
+    model_rows = [m["row"] for m in models.values()]
     rows += model_rows
 
+    # the final model is the one with the best F1 on the validation users
     best = max(model_rows, key=lambda r: r["valid"]["f1"])
     print(f"Final model: {best['name']} (valid F1 {best['valid']['f1']:.4f}, test F1 {best['test']['f1']:.4f})")
 
     # --- save the final model and its metadata (the API reads these two files) ---
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(fitted[best["name"]], MODEL_DIR / "model.joblib")
+    joblib.dump(models[best["name"]]["model"], MODEL_DIR / "model.joblib")
     metadata = {
         "model_name": best["name"],
         "threshold": best["threshold"],
@@ -150,10 +156,11 @@ def main(sample: float = 1.0, names: list[str] | None = None) -> dict:
         "top_k": TOP_K,
         "sample": sample,
         "results": rows,
-        "threshold_curves": curves,
+        "threshold_curves": {name: m["curve"] for name, m in models.items()},
     }
     (REPORTS_DIR / "metrics.json").write_text(json.dumps(report, indent=2))
-    pd.DataFrame(importances).rename_axis("feature").to_csv(REPORTS_DIR / "feature_importance.csv")
+    importances = pd.DataFrame({name: m["importance"] for name, m in models.items()})
+    importances.rename_axis("feature").to_csv(REPORTS_DIR / "feature_importance.csv")
     (REPORTS_DIR / "model_comparison.md").write_text(
         "# Model comparison\n\n"
         f"Metrics on the test users ({data['test']['user_id'].nunique():,} users). "
@@ -164,8 +171,8 @@ def main(sample: float = 1.0, names: list[str] | None = None) -> dict:
 
     test = data["test"]
     predictions = test[["user_id", "product_id", "label"] + FEATURES].copy()
-    for name, score in test_scores.items():
-        predictions[f"prob_{name}"] = score.astype(np.float32)
+    for name, m in models.items():
+        predictions[f"prob_{name}"] = m["p_test"].astype(np.float32)
     predictions.to_parquet(PROCESSED_DIR / "predictions_test.parquet", index=False)
 
     print(f"Saved model to {MODEL_DIR}, reports to {REPORTS_DIR}")
