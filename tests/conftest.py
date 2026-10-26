@@ -9,8 +9,6 @@ user 1 (Kaggle train user)          user 2 (Kaggle train user)      user 3 (Kagg
 Product ids: A=10, B=20, C=30, D=40, E=50.
 """
 
-from __future__ import annotations
-
 import json
 
 import joblib

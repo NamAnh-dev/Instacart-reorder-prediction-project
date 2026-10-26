@@ -16,8 +16,6 @@ Outputs:
 Run:  python -m src.features
 """
 
-from __future__ import annotations
-
 import pandas as pd
 
 from src.config import FEATURES, PROCESSED_DIR, SERVING_DIR

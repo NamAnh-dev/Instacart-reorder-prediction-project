@@ -4,8 +4,6 @@ order_products__prior.csv has about 32 million rows, so we use small integer
 types to keep memory low on a normal laptop.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pandas as pd

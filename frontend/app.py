@@ -3,8 +3,6 @@
 Run locally:  streamlit run frontend/app.py   (the API must be running)
 """
 
-from __future__ import annotations
-
 import os
 
 import pandas as pd

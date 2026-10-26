@@ -9,8 +9,6 @@ LightGBM uses early stopping: training stops when the log loss on the validation
 improved for 50 rounds, so we do not have to guess the number of trees.
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 from lightgbm import LGBMClassifier, early_stopping, log_evaluation

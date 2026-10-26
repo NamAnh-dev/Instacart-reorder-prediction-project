@@ -1,7 +1,5 @@
 """Project settings in one place: paths, random seed, feature list, model settings."""
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 

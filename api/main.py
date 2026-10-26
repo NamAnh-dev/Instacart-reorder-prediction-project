@@ -4,8 +4,6 @@ Run locally:  uvicorn api.main:app --reload
 Docs:         http://localhost:8000/docs
 """
 
-from __future__ import annotations
-
 from contextlib import asynccontextmanager
 from pathlib import Path
 

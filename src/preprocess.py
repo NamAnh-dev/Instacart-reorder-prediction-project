@@ -13,8 +13,6 @@ Outputs in data/processed/:
 Run:  python -m src.preprocess
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 

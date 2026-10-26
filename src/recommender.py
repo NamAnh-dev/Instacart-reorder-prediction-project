@@ -4,8 +4,6 @@ Used by the API. Features were computed in advance by `python -m src.features`
 (batch features), and the model scores them when a request comes in.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

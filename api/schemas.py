@@ -1,7 +1,5 @@
 """Request and response formats of the API (validated by Pydantic)."""
 
-from __future__ import annotations
-
 from pydantic import BaseModel, Field
 
 

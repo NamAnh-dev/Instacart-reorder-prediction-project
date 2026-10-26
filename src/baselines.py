@@ -4,8 +4,6 @@ Each baseline gives a score to every (user, product) pair. We recommend the pair
 score >= threshold, and the threshold is chosen on the validation users.
 """
 
-from __future__ import annotations
-
 import pandas as pd
 
 from src.config import THRESHOLDS

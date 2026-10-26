@@ -18,8 +18,6 @@ Run:  python -m src.train
       python -m src.train --sample 0.1 --models logistic_regression lightgbm   (quick trial)
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import time

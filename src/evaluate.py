@@ -13,8 +13,6 @@ Ranking metrics for a shelf of k items: precision@k and recall@k.
 Row-level metrics: ROC AUC and PR AUC (how well the probabilities rank the pairs).
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score, roc_auc_score
